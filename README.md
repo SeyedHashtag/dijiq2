@@ -19,7 +19,15 @@ A Telegram bot for managing VPN users through an API interface. This bot allows 
 
 ## Installation
 
-### Quick Installation
+### One-Click Installation
+
+```bash
+bash <(curl -s https://raw.githubusercontent.com/SeyedHashtag/dijiq2/main/install.sh)
+```
+
+After installation, use the `dijiq2` command to launch the bot or `dijiq2-config` to edit the configuration.
+
+### Standard Installation
 
 1. SSH into your server
 2. Clone the repository:
@@ -32,35 +40,6 @@ A Telegram bot for managing VPN users through an API interface. This bot allows 
    chmod +x install.sh
    ./install.sh
    ```
-4. Configure the `.env` file with your settings:
-   ```
-   nano /etc/hysteria/dijiq2/.env
-   ```
-
-### Manual Installation
-
-If you prefer to install manually:
-
-1. Install required packages:
-   ```
-   apt update && apt install -y jq qrencode curl python3 python3-pip python3-venv git bc zip
-   ```
-2. Clone the repository:
-   ```
-   git clone https://github.com/SeyedHashtag/dijiq2.git /etc/hysteria/dijiq2
-   cd /etc/hysteria/dijiq2
-   ```
-3. Create virtual environment and install dependencies:
-   ```
-   python3 -m venv venv
-   source venv/bin/activate
-   pip install -r requirements.txt
-   ```
-4. Copy and configure environment variables:
-   ```
-   cp .env.example .env
-   nano .env
-   ```
 
 ## Configuration
 
@@ -71,22 +50,6 @@ Edit the `.env` file and set these variables:
 - `VPN_API_URL`: URL of your VPN API server
 - `API_KEY`: Authentication key for the VPN API
 - `SUB_URL`: URL for subscription links (typically your VPN server address)
-
-## Running the Bot
-
-### Using the runbot.sh script:
-
-```
-/etc/hysteria/dijiq2/src/bot/runbot.sh start <API_TOKEN> <ADMIN_USER_IDS>
-```
-
-### Manually:
-
-```
-cd /etc/hysteria/dijiq2
-source venv/bin/activate
-python src/bot/tbot.py
-```
 
 ## Usage
 
