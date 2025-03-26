@@ -170,7 +170,7 @@ setup_dijiq2() {
 TELEGRAM_TOKEN=$telegram_token
 
 # Admin User IDs (comma-separated list of Telegram user IDs)
-ADMIN_USERS=$admin_id
+ADMIN_USER_IDS=$admin_id
 
 # VPN server API URL (used for API requests)
 VPN_API_URL=$api_url

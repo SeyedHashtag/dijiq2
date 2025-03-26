@@ -44,7 +44,7 @@ def check_environment():
     
     required_vars = [
         'TELEGRAM_TOKEN',
-        'ADMIN_USERS',  # Changed from ADMIN_USER_IDS to ADMIN_USERS
+        'ADMIN_USER_IDS',  # Changed back to ADMIN_USER_IDS to match command.py
         'VPN_API_URL',
         'API_KEY',
         'SUB_URL'
