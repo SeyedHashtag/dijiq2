@@ -207,96 +207,161 @@ ExecStart=/etc/dijiq2/venv/bin/python /etc/dijiq2/src/bot/tbot.py
 Restart=always
 RestartSec=10
 # Environment variables are loaded from .env file using python-dotenv
-
-[Install]
+StandardError=append:/var/log/dijiq2/error.log
+[Install]ment variables are loaded from .env file using python-dotenv
 WantedBy=multi-user.target
-EOF
-
+EOFstall]
+WantedBy=multi-user.target
     systemctl daemon-reload
     systemctl enable dijiq2.service
     echo -e "Created systemd service ${GREEN}$CHECKMARK${NC}"
-}
-
+}   mkdir -p /var/log/dijiq2
+    chmod 755 /var/log/dijiq2
 # Create executable commands for controlling the bot
-create_commands() {
+create_commands() {n-reload
     echo -e "Setting up command-line tools..."
-    
+    echo -e "Created systemd service ${GREEN}$CHECKMARK${NC}"
     INSTALL_DIR="/etc/dijiq2"
     
-    # Create commands for global access
+    # Create commands for global accesslling the bot
     cat > /usr/local/bin/dijiq2 << EOF
-#!/bin/bash
+#!/bin/bash "Setting up command-line tools..."
 cd $INSTALL_DIR && source venv/bin/activate && python src/bot/tbot.py "\$@"
-EOF
+EOF INSTALL_DIR="/etc/dijiq2"
     
     cat > /usr/local/bin/dijiq2-config << EOF
-#!/bin/bash
+#!/bin/bashusr/local/bin/dijiq2 << EOF
 nano $INSTALL_DIR/.env
-EOF
+EOF$INSTALL_DIR && source venv/bin/activate && python src/bot/tbot.py "\$@"
     
-    # Make them executable
+    cat > /usr/local/bin/dijiq2-logs << EOF
+#!/bin/bashnfig << EOF
+if [ -f "/var/log/dijiq2/bot.log" ]; then
+    tail -n 50 /var/log/dijiq2/bot.log $INSTALL_DIR/.env
+else
+    echo "Log file not found"   
+fi    # Make them executable
+EOF
+al/bin/dijiq2-config
+    cat > /usr/local/bin/dijiq2-debug << EOF
+#!/bin/bashecho -e "Created 'dijiq2' and 'dijiq2-config' commands ${GREEN}$CHECKMARK${NC}"
+echo "=== Dijiq2 Diagnostic Tool ==="
+echo "Checking installation..."
+if [ -d "/etc/dijiq2" ]; then
+    echo "✅ Installation directory found"permissions() {
+elseINSTALL_DIR="/etc/dijiq2"
+    echo "❌ Installation directory missing"
+fi
+
+echo "Checking Python environment..."mod +x $INSTALL_DIR/src/bot/start_bot.sh
+if [ -d "/etc/dijiq2/venv" ]; then   
+    echo "✅ Virtual environment found"    # Set appropriate permissions for the .env file
+elseenv" ]; then
+    echo "❌ Virtual environment missing"chmod 600 "$INSTALL_DIR/.env"  # Only readable by root
+fi
+
+echo "Checking configuration..."tory writable
+if [ -f "/etc/dijiq2/.env" ]; thenjiq2
+    echo "✅ Configuration file found"ar/log/dijiq2
+else
+    echo "❌ Configuration file missing"
+firocess
+() {
+echo "Checking service status..."
+systemctl status dijiq2
+
+echo "Checking logs..."
+if [ -f "/var/log/dijiq2/bot.log" ]; then
+    echo "=== Last 10 log entries ==="
+    tail -n 10 /var/log/dijiq2/bot.log
+elsesetup_permissions
+    echo "❌ Log file not found"
+fimplete!${NC}"
+s a system service.${NC}"
+echo "=== End of diagnostics ==="
+EOF systemctl status dijiq2"
+    
+    # Make them executable"${YELLOW}You can also run the bot using the 'dijiq2' command.${NC}"
     chmod +x /usr/local/bin/dijiq2
     chmod +x /usr/local/bin/dijiq2-config
-    
-    echo -e "Created 'dijiq2' and 'dijiq2-config' commands ${GREEN}$CHECKMARK${NC}"
-}
-
-# Set up permissions for scripts and files
-setup_permissions() {
-    INSTALL_DIR="/etc/dijiq2"
-    
-    # Make sure runbot script is executable
-    if [ -f "$INSTALL_DIR/src/bot/runbot.sh" ]; then
-        chmod +x "$INSTALL_DIR/src/bot/runbot.sh"
-    fi
-    
-    # Set appropriate permissions for the .env file
-    if [ -f "$INSTALL_DIR/.env" ]; then
-        chmod 600 "$INSTALL_DIR/.env"  # Only readable by root
-    fi
-}
-
-# Main installation process
-main() {
-    display_logo
-    check_root
-    check_os_version
-    install_dependencies
-    setup_dijiq2
-    create_service
-    create_commands
-    setup_permissions
-    
-    echo -e "${GREEN}Installation complete!${NC}"
-    echo -e "${YELLOW}The bot has been installed as a system service.${NC}"
-    echo -e "- ${GREEN}Start${NC}: systemctl start dijiq2"
-    echo -e "- ${YELLOW}Status${NC}: systemctl status dijiq2"
-    echo -e "- ${RED}Stop${NC}:  systemctl stop dijiq2"
-    echo -e "${YELLOW}You can also run the bot using the 'dijiq2' command.${NC}"
-    echo -e "${YELLOW}To edit configuration, use the 'dijiq2-config' command.${NC}"
-    
-    # If this is an update and the service was running, restart it automatically
-    if [ "$IS_UPDATE" = true ]; then
-        if [ "$SERVICE_WAS_RUNNING" = true ]; then
-            echo -e "${YELLOW}Restarting service to apply updates...${NC}"
-            systemctl restart dijiq2
-            echo -e "${GREEN}Service restarted successfully!${NC}"
-        else
-            # For updates where the service wasn't running, ask if they want to start it
-            read -p "Do you want to start the bot now? (y/n) " -n 1 -r
-            echo
-            if [[ $REPLY =~ ^[Yy]$ ]]; then
-                systemctl start dijiq2
-                echo -e "${GREEN}Bot started! Check status with: systemctl status dijiq2${NC}"
-            fi
-        fi
-    else
-        # For fresh installations, ask if they want to start it
-        read -p "Do you want to start the bot now? (y/n) " -n 1 -r
-        echo
-        if [[ $REPLY =~ ^[Yy]$ ]]; then
+    chmod +x /usr/local/bin/dijiq2-logs an update and the service was running, restart it automatically
+    chmod +x /usr/local/bin/dijiq2-debug
+    true ]; then
+    echo -e "Created command-line tools ${GREEN}$CHECKMARK${NC}"
+}stemctl restart dijiq2
+  echo -e "${GREEN}Service restarted successfully!${NC}"
+# Set up permissions for scripts and fileselse
+setup_permissions() { if they want to start it
+    INSTALL_DIR="/etc/dijiq2"1 -r
+    echo
+    # Make sure runbot script is executablethen
+    if [ -f "$INSTALL_DIR/src/bot/runbot.sh" ]; thenjiq2
+        chmod +x "$INSTALL_DIR/src/bot/runbot.sh"NC}"
+    fi  fi
+      fi
+    # Set appropriate permissions for the .env file   else
+    if [ -f "$INSTALL_DIR/.env" ]; then        # For fresh installations, ask if they want to start it
+        chmod 600 "$INSTALL_DIR/.env"  # Only readable by rootnt to start the bot now? (y/n) " -n 1 -r
+    fi    echo
+}        if [[ $REPLY =~ ^[Yy]$ ]]; then
             systemctl start dijiq2
-            echo -e "${GREEN}Bot started! Check status with: systemctl status dijiq2${NC}"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+main# Execute the installation}    fi        fi            echo -e "${GREEN}Bot started! Check status with: systemctl status dijiq2${NC}"            systemctl start dijiq2        if [[ $REPLY =~ ^[Yy]$ ]]; then        echo        read -p "Do you want to start the bot now? (y/n) " -n 1 -r        # For fresh installations, ask if they want to start it    else        fi            fi                echo -e "${GREEN}Bot started! Check status with: systemctl status dijiq2${NC}"                systemctl start dijiq2            if [[ $REPLY =~ ^[Yy]$ ]]; then            echo            read -p "Do you want to start the bot now? (y/n) " -n 1 -r            # For updates where the service wasn't running, ask if they want to start it        else            echo -e "${GREEN}Service restarted successfully!${NC}"            systemctl restart dijiq2            echo -e "${YELLOW}Restarting service to apply updates...${NC}"        if [ "$SERVICE_WAS_RUNNING" = true ]; then    if [ "$IS_UPDATE" = true ]; then    # If this is an update and the service was running, restart it automatically        echo -e "${YELLOW}For troubleshooting, use the 'dijiq2-debug' command.${NC}"    echo -e "${YELLOW}To view logs, use the 'dijiq2-logs' command.${NC}"    echo -e "${YELLOW}To edit configuration, use the 'dijiq2-config' command.${NC}"    echo -e "${YELLOW}You can also run the bot using the 'dijiq2' command.${NC}"    echo -e "- ${RED}Stop${NC}:  systemctl stop dijiq2"    echo -e "- ${YELLOW}Status${NC}: systemctl status dijiq2"    echo -e "- ${GREEN}Start${NC}: systemctl start dijiq2"    echo -e "${YELLOW}The bot has been installed as a system service.${NC}"    echo -e "${GREEN}Installation complete!${NC}"    echo ""display_completion() {}    display_completion        setup_permissions    create_commands    create_service    setup_dijiq2    install_dependencies    check_os_version    check_root    display_logomain() {# Main installation process            echo -e "${GREEN}Bot started! Check status with: systemctl status dijiq2${NC}"
         fi
     fi
 }
