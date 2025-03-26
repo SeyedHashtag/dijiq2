@@ -1,11 +1,11 @@
 #!/bin/bash
 
-# Text formatting
-GREEN='\033[0;32m'
-RED='\033[0;31m'
-YELLOW='\033[0;33m'
-NC='\033[0m' # No Color
-heavy_checkmark=$(printf "\xE2\x9C\x85")
+# Set terminal colors
+GREEN="\033[0;32m"
+YELLOW="\033[1;33m"
+RED="\033[0;31m"
+NC="\033[0m" # No Color
+CHECKMARK="✅"
 
 # Logo display function
 display_logo() {
@@ -22,6 +22,16 @@ display_logo() {
     echo ""
 }
 
+# Check if script is run as root
+check_root() {
+    if [ "$(id -u)" -ne 0 ]; then
+        echo -e "${RED}This script must be run as root.${NC}"
+        exit 1
+    fi
+    echo -e "${GREEN}Root access confirmed.${NC}"
+}
+
+# Check OS compatibility
 check_os_version() {
     local os_name os_version
 
@@ -39,152 +49,258 @@ check_os_version() {
         apt update && apt install -y bc
     fi
 
-    if [[ "$os_name" == "ubuntu" && $(echo "$os_version >= 22" | bc) -eq 1 ]] ||
-       [[ "$os_name" == "debian" && $(echo "$os_version >= 11" | bc) -eq 1 ]]; then
+    if [[ "$os_name" == "ubuntu" && $(echo "$os_version >= 20" | bc) -eq 1 ]] ||
+       [[ "$os_name" == "debian" && $(echo "$os_version >= 10" | bc) -eq 1 ]]; then
         echo -e "${GREEN}OS check passed: $os_name $os_version${NC}"
         return 0
     else
-        echo -e "${RED}This script is only supported on Ubuntu 22+ or Debian 11+.${NC}"
+        echo -e "${RED}This script is only supported on Ubuntu 20+ or Debian 10+.${NC}"
         exit 1
     fi
 }
 
-check_root() {
-    if [ "$(id -u)" -ne 0 ]; then
-        echo -e "${RED}This script must be run as root.${NC}"
-        exit 1
-    fi
-    echo -e "${GREEN}Root access confirmed.${NC}"
-}
-
+# Install required packages
 install_dependencies() {
     echo -e "Installing required packages..."
     
-    REQUIRED_PACKAGES=("jq" "qrencode" "curl" "python3" "python3-pip" "python3-venv" "git" "bc" "zip")
+    REQUIRED_PACKAGES=("python3" "python3-pip" "python3-venv" "git" "curl" "jq" "qrencode" "bc" "zip")
     MISSING_PACKAGES=()
 
     for package in "${REQUIRED_PACKAGES[@]}"; do
         if ! command -v "$package" &> /dev/null; then
             MISSING_PACKAGES+=("$package")
         else
-            echo -e "Package $package ${GREEN}$heavy_checkmark${NC}"
+            echo -e "Package $package ${GREEN}$CHECKMARK${NC}"
         fi
     done
 
     if [ ${#MISSING_PACKAGES[@]} -ne 0 ]; then
-        echo -e "Installing missing packages: ${YELLOW}${MISSING_PACKAGES[@]}${NC}"
+        echo -e "${YELLOW}Installing missing packages: ${MISSING_PACKAGES[@]}${NC}"
         apt update -qq && apt upgrade -y -qq
         for package in "${MISSING_PACKAGES[@]}"; do
-            apt install -y -qq "$package" &> /dev/null && echo -e "Package $package ${GREEN}$heavy_checkmark${NC}"
+            apt install -y -qq "$package" &> /dev/null && echo -e "Installed $package ${GREEN}$CHECKMARK${NC}"
         done
     else
         echo -e "${GREEN}All required packages are already installed.${NC}"
     fi
 }
 
-setup_repository() {
-    echo -e "Setting up repository..."
-    
-    # Set installation directory
+# Set up the Dijiq2 VPN Bot
+setup_dijiq2() {
     INSTALL_DIR="/etc/dijiq2"
-    mkdir -p $INSTALL_DIR
-
-    # Check if we're running from the cloned repository or via curl
-    if [ -d "$INSTALL_DIR/.git" ]; then
-        echo -e "Updating existing repository..."
-        cd $INSTALL_DIR
+    IS_UPDATE=false
+    
+    if [ -d "$INSTALL_DIR" ]; then
+        echo -e "${YELLOW}Dijiq2 installation found. Updating...${NC}"
+        cd "$INSTALL_DIR"
+        
+        # Check if the service is running before updating
+        SERVICE_WAS_RUNNING=false
+        if systemctl is-active --quiet dijiq2.service; then
+            SERVICE_WAS_RUNNING=true
+            echo -e "${YELLOW}Stopping service for update...${NC}"
+            systemctl stop dijiq2.service
+        fi
+        
+        # Store current version before update
+        PREV_VERSION=""
+        if [ -f "VERSION" ]; then
+            PREV_VERSION=$(cat VERSION)
+        fi
+        
+        # Perform the update
         git pull
+        
+        # Set flag to indicate this is an update
+        IS_UPDATE=true
+        
+        # If there's a version file, check if version changed
+        if [ -f "VERSION" ]; then
+            CURR_VERSION=$(cat VERSION)
+            if [ "$PREV_VERSION" != "$CURR_VERSION" ] && [ ! -z "$PREV_VERSION" ]; then
+                echo -e "${GREEN}Updated from version $PREV_VERSION to $CURR_VERSION${NC}"
+                
+                # Display changelog if available
+                if [ -f "CHANGELOG.md" ]; then
+                    echo -e "${YELLOW}Changelog:${NC}"
+                    cat CHANGELOG.md | head -n 20  # Show first 20 lines of changelog
+                    echo -e "${YELLOW}...(see full changelog in CHANGELOG.md)${NC}"
+                fi
+            fi
+        fi
     else
-        echo -e "Cloning repository..."
-        git clone https://github.com/SeyedHashtag/dijiq2.git $INSTALL_DIR
+        echo -e "${GREEN}Cloning Dijiq2 VPN Bot...${NC}"
+        mkdir -p $(dirname "$INSTALL_DIR")
+        git clone https://github.com/SeyedHashtag/dijiq2.git "$INSTALL_DIR"
+        cd "$INSTALL_DIR"
     fi
-
-    cd $INSTALL_DIR
-    echo -e "${GREEN}Repository setup complete.${NC}"
-}
-
-setup_python_environment() {
-    echo -e "Setting up Python environment..."
     
-    INSTALL_DIR="/etc/dijiq2"
-    cd $INSTALL_DIR
-    
-    # Create virtual environment
+    # Create Python virtual environment
+    echo -e "${GREEN}Setting up Python environment...${NC}"
     python3 -m venv venv
-    source $INSTALL_DIR/venv/bin/activate
-    
-    # Upgrade pip and install requirements
+    source venv/bin/activate
     pip install --upgrade pip &> /dev/null
-    pip install -r requirements.txt && echo -e "${GREEN}Python requirements installed $heavy_checkmark${NC}"
-}
+    pip install -r requirements.txt && echo -e "Installed Python requirements ${GREEN}$CHECKMARK${NC}"
+    
+    # Configure the bot using environment variables
+    if [ ! -f ".env" ]; then
+        echo -e "${YELLOW}Please provide the following credentials for your bot:${NC}"
+        
+        # Ask for Telegram bot token
+        read -p "Enter your Telegram bot token: " telegram_token
+        
+        # Ask for admin Telegram user ID
+        read -p "Enter your Telegram user ID (for admin access): " admin_id
+        
+        # Ask for VPN API URL
+        read -p "Enter your VPN API URL: " api_url
+        
+        # Ask for API key
+        read -p "Enter your VPN API key: " api_key
+        
+        # Ask for subscription URL
+        read -p "Enter your subscription URL (press Enter to use same as API URL): " sub_url
+        if [ -z "$sub_url" ]; then
+            sub_url=$api_url
+        fi
+        
+        # Create the .env file
+        cat > "$INSTALL_DIR/.env" << EOF
+# Telegram Bot Token
+TELEGRAM_TOKEN=$telegram_token
 
-setup_configuration() {
-    echo -e "Setting up configuration..."
-    
-    INSTALL_DIR="/etc/dijiq2"
-    
-    # Create .env file if it doesn't exist
-    if [ ! -f "$INSTALL_DIR/.env" ]; then
-        echo -e "Creating .env file from example..."
-        cp "$INSTALL_DIR/.env.example" "$INSTALL_DIR/.env"
-        echo -e "${YELLOW}Please edit $INSTALL_DIR/.env with your configuration${NC}"
+# Admin User IDs (comma-separated list of Telegram user IDs)
+ADMIN_USERS=$admin_id
+
+# VPN server API URL (used for API requests)
+VPN_API_URL=$api_url
+
+# VPN server API Key
+API_KEY=$api_key
+
+# Subscription URL for generating user links
+SUB_URL=$sub_url
+EOF
+        echo -e "Environment configuration file created ${GREEN}$CHECKMARK${NC}"
     else
-        echo -e "${GREEN}.env file already exists.${NC}"
+        echo -e "Environment configuration file already exists ${GREEN}$CHECKMARK${NC}"
     fi
     
-    # Set permissions
-    chmod +x $INSTALL_DIR/src/bot/runbot.sh
+    # Export variables for later use
+    export IS_UPDATE SERVICE_WAS_RUNNING
 }
 
-setup_commands() {
-    echo -e "Setting up system commands..."
+# Create a systemd service for auto-start with environment variables
+create_service() {
+    echo -e "Creating systemd service..."
     
-    INSTALL_DIR="/etc/dijiq2"
-    
-    # Create actual executable scripts instead of aliases
-    cat > /usr/local/bin/dijiq2 << EOF
-#!/bin/bash
-cd $INSTALL_DIR
-source venv/bin/activate
-python src/bot/tbot.py
+    cat > /etc/systemd/system/dijiq2.service << EOF
+[Unit]
+Description=Dijiq2 VPN Bot
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/etc/dijiq2
+ExecStart=/etc/dijiq2/venv/bin/python /etc/dijiq2/src/bot/tbot.py
+Restart=always
+RestartSec=10
+# Environment variables are loaded from .env file using python-dotenv
+
+[Install]
+WantedBy=multi-user.target
 EOF
 
+    systemctl daemon-reload
+    systemctl enable dijiq2.service
+    echo -e "Created systemd service ${GREEN}$CHECKMARK${NC}"
+}
+
+# Create executable commands for controlling the bot
+create_commands() {
+    echo -e "Setting up command-line tools..."
+    
+    INSTALL_DIR="/etc/dijiq2"
+    
+    # Create commands for global access
+    cat > /usr/local/bin/dijiq2 << EOF
+#!/bin/bash
+cd $INSTALL_DIR && source venv/bin/activate && python src/bot/tbot.py "\$@"
+EOF
+    
     cat > /usr/local/bin/dijiq2-config << EOF
 #!/bin/bash
 nano $INSTALL_DIR/.env
 EOF
-
+    
     # Make them executable
     chmod +x /usr/local/bin/dijiq2
     chmod +x /usr/local/bin/dijiq2-config
     
-    echo -e "${GREEN}Commands 'dijiq2' and 'dijiq2-config' are now available system-wide.${NC}"
+    echo -e "Created 'dijiq2' and 'dijiq2-config' commands ${GREEN}$CHECKMARK${NC}"
 }
 
-display_completion() {
-    echo ""
-    echo -e "${GREEN}Installation completed! $heavy_checkmark${NC}"
-    echo ""
-    echo -e "${YELLOW}To configure the bot:${NC}"
-    echo -e "  Run the command: ${GREEN}dijiq2-config${NC}"
-    echo ""
-    echo -e "${YELLOW}To start the bot:${NC}"
-    echo -e "  Run the command: ${GREEN}dijiq2${NC}"
-    echo ""
-    echo -e "${YELLOW}These commands are available immediately - no restart required.${NC}"
+# Set up permissions for scripts and files
+setup_permissions() {
+    INSTALL_DIR="/etc/dijiq2"
+    
+    # Make sure runbot script is executable
+    if [ -f "$INSTALL_DIR/src/bot/runbot.sh" ]; then
+        chmod +x "$INSTALL_DIR/src/bot/runbot.sh"
+    fi
+    
+    # Set appropriate permissions for the .env file
+    if [ -f "$INSTALL_DIR/.env" ]; then
+        chmod 600 "$INSTALL_DIR/.env"  # Only readable by root
+    fi
 }
 
+# Main installation process
 main() {
     display_logo
     check_root
     check_os_version
     install_dependencies
-    setup_repository
-    setup_python_environment
-    setup_configuration
-    setup_commands  # Changed from setup_alias to setup_commands
-    display_completion
+    setup_dijiq2
+    create_service
+    create_commands
+    setup_permissions
+    
+    echo -e "${GREEN}Installation complete!${NC}"
+    echo -e "${YELLOW}The bot has been installed as a system service.${NC}"
+    echo -e "- ${GREEN}Start${NC}: systemctl start dijiq2"
+    echo -e "- ${YELLOW}Status${NC}: systemctl status dijiq2"
+    echo -e "- ${RED}Stop${NC}:  systemctl stop dijiq2"
+    echo -e "${YELLOW}You can also run the bot using the 'dijiq2' command.${NC}"
+    echo -e "${YELLOW}To edit configuration, use the 'dijiq2-config' command.${NC}"
+    
+    # If this is an update and the service was running, restart it automatically
+    if [ "$IS_UPDATE" = true ]; then
+        if [ "$SERVICE_WAS_RUNNING" = true ]; then
+            echo -e "${YELLOW}Restarting service to apply updates...${NC}"
+            systemctl restart dijiq2
+            echo -e "${GREEN}Service restarted successfully!${NC}"
+        else
+            # For updates where the service wasn't running, ask if they want to start it
+            read -p "Do you want to start the bot now? (y/n) " -n 1 -r
+            echo
+            if [[ $REPLY =~ ^[Yy]$ ]]; then
+                systemctl start dijiq2
+                echo -e "${GREEN}Bot started! Check status with: systemctl status dijiq2${NC}"
+            fi
+        fi
+    else
+        # For fresh installations, ask if they want to start it
+        read -p "Do you want to start the bot now? (y/n) " -n 1 -r
+        echo
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            systemctl start dijiq2
+            echo -e "${GREEN}Bot started! Check status with: systemctl status dijiq2${NC}"
+        fi
+    fi
 }
 
+# Execute the installation
 main
 
