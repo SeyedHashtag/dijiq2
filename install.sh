@@ -322,6 +322,7 @@ setup_permissions() {
     chmod 755 /var/log/dijiq2
 }
 
+# Display completion message
 display_completion() {
     echo ""
     echo -e "${GREEN}Installation complete!${NC}"
@@ -343,6 +344,7 @@ display_completion() {
 
 # Main installation process
 main() {
+    display_logo
     check_root
     check_os_version
     install_dependencies
