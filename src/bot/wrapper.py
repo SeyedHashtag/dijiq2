@@ -8,6 +8,9 @@ import logging
 import traceback
 from dotenv import load_dotenv
 
+# Add project root to Python path
+sys.path.insert(0, '/etc/dijiq2')
+
 def setup_logging():
     """Configure logging to file and console"""
     os.makedirs('/var/log/dijiq2', exist_ok=True)
@@ -68,6 +71,9 @@ def run_bot():
     
     try:
         logger.info("Starting Dijiq2 bot...")
+        
+        # Set current directory to the bot directory so imports work correctly
+        os.chdir('/etc/dijiq2/src/bot')
         
         # Import the bot module only after environment check
         import tbot

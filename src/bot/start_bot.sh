@@ -13,6 +13,9 @@ cd $INSTALL_DIR
 # Activate virtual environment
 source $INSTALL_DIR/venv/bin/activate
 
+# Set Python path to include project root
+export PYTHONPATH=$INSTALL_DIR:$PYTHONPATH
+
 # Run the wrapper script which handles errors and logging
 python $INSTALL_DIR/src/bot/wrapper.py 2>> $LOG_DIR/error.log
 

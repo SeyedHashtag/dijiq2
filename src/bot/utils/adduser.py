@@ -1,10 +1,16 @@
 import qrcode
 import io
 import os
+import sys
 from telebot import types
 from utils.command import *
 from utils.common import create_main_markup
 from dotenv import load_dotenv
+
+# Add project root to Python path
+sys.path.insert(0, '/etc/dijiq2')
+
+# Now import from the correct path
 from src.api.api_add_user import VpnApiClient
 from src.models.user import VpnUser
 

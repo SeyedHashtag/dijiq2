@@ -201,9 +201,26 @@ create_service() {
     # Create a startup script to handle errors properly
     cat > /etc/dijiq2/start_bot.sh << EOF
 #!/bin/bash
-cd /etc/dijiq2
-source venv/bin/activate
-python src/bot/tbot.py 2>> /var/log/dijiq2/error.log >> /var/log/dijiq2/bot.log
+INSTALL_DIR="/etc/dijiq2"
+LOG_DIR="/var/log/dijiq2"
+
+# Make sure log directory exists
+mkdir -p \$LOG_DIR
+
+# Change to installation directory
+cd \$INSTALL_DIR
+
+# Activate virtual environment
+source \$INSTALL_DIR/venv/bin/activate
+
+# Set Python path to include project root
+export PYTHONPATH=\$INSTALL_DIR:\$PYTHONPATH
+
+# Run the wrapper script which handles errors and logging
+python \$INSTALL_DIR/src/bot/wrapper.py 2>> \$LOG_DIR/error.log
+
+# Exit with the exit code from the Python script
+exit \$?
 EOF
 
     chmod +x /etc/dijiq2/start_bot.sh
