@@ -8,8 +8,9 @@ from telebot import types
 
 load_dotenv()
 
-API_TOKEN = os.getenv('API_TOKEN')
-ADMIN_USER_IDS = json.loads(os.getenv('ADMIN_USERS', '[]'))
+# Fix the environment variable name to match what's in the .env file
+API_TOKEN = os.getenv('TELEGRAM_TOKEN')  # Changed from API_TOKEN to TELEGRAM_TOKEN
+ADMIN_USER_IDS = json.loads(os.getenv('ADMIN_USER_IDS', '[]'))  # This is already correct
 CLI_PATH = '/etc/hysteria/core/cli.py'
 BACKUP_DIRECTORY = '/opt/hysbackup'
 bot = telebot.TeleBot(API_TOKEN)
@@ -23,4 +24,5 @@ def run_cli_command(command):
         return f'Error: {e.output.decode("utf-8")}'
 
 def is_admin(user_id):
-    return user_id in ADMIN_USER_IDS
+    # Convert user_id to string for comparison since IDs from the .env might be strings
+    return str(user_id) in map(str, ADMIN_USER_IDS)

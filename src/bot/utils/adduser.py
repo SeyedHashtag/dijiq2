@@ -7,12 +7,18 @@ from utils.command import *
 from utils.common import create_main_markup
 from dotenv import load_dotenv
 
-# Add project root to Python path
-sys.path.insert(0, '/etc/dijiq2')
+# Modify this import to use a more direct approach
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..')))
 
-# Now import from the correct path
-from src.api.api_add_user import VpnApiClient
-from src.models.user import VpnUser
+try:
+    from src.api.api_add_user import VpnApiClient
+    from src.models.user import VpnUser
+except ImportError:
+    # Try relative import if absolute import fails
+    import subprocess
+    subprocess.run(['pip', 'install', '-e', '/etc/dijiq2'])
+    from src.api.api_add_user import VpnApiClient
+    from src.models.user import VpnUser
 
 # Load environment variables for SUB_URL only (API handles its own credentials)
 load_dotenv()
