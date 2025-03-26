@@ -1,10 +1,16 @@
 import qrcode
 import io
-import json
+import os
 from telebot import types
 from utils.command import *
-from utils.common import create_main_markup  
+from utils.common import create_main_markup
+from dotenv import load_dotenv
+from src.api.api_add_user import VpnApiClient
+from src.models.user import VpnUser
 
+# Load environment variables for SUB_URL only (API handles its own credentials)
+load_dotenv()
+SUB_URL = os.getenv('SUB_URL')
 
 def create_cancel_markup(back_step=None):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
@@ -23,31 +29,14 @@ def process_add_user_step1(message):
         bot.reply_to(message, "Process canceled.", reply_markup=create_main_markup())
         return
 
-    username = message.text.strip()
+    # Convert username to lowercase immediately
+    username = message.text.strip().lower()
     if username == "":
         bot.reply_to(message, "Username cannot be empty. Please enter a valid username.", reply_markup=create_cancel_markup())
         bot.register_next_step_handler(message, process_add_user_step1)
         return
 
-    command = f"python3 {CLI_PATH} list-users"
-    result = run_cli_command(command)
-
-    try:
-        users = json.loads(result)
-        existing_users = {user.lower() for user in users.keys()}
-
-        if username.lower() in existing_users:
-            bot.reply_to(message, f"Username '{username}' already exists. Please choose a different username:", reply_markup=create_cancel_markup())
-            bot.register_next_step_handler(message, process_add_user_step1)
-            return
-    except json.JSONDecodeError:
-        if "No such file or directory" in result or result.strip() == "":
-            bot.reply_to(message, "User list file does not exist. Adding the first user.", reply_markup=create_cancel_markup())
-        else:
-            bot.reply_to(message, "Error retrieving user list. Please try again later.")
-            bot.send_message(message.chat.id, "Returning to main menu...", reply_markup=create_main_markup())
-            return
-
+    # No need to check for existing users as API will handle that
     msg = bot.reply_to(message, "Enter traffic limit (GB):", reply_markup=create_cancel_markup(back_step=process_add_user_step1))
     bot.register_next_step_handler(msg, process_add_user_step2, username)
 
@@ -79,25 +68,44 @@ def process_add_user_step3(message, username, traffic_limit):
 
     try:
         expiration_days = int(message.text.strip())
-        lower_username = username.lower()
-        command = f"python3 {CLI_PATH} add-user -u {username} -t {traffic_limit} -e {expiration_days}"
-        result = run_cli_command(command)
-
+        
+        # Use API client to add user
         bot.send_chat_action(message.chat.id, 'typing')
-        qr_command = f"python3 {CLI_PATH} show-user-uri -u {lower_username} -ip 4"
-        qr_result = run_cli_command(qr_command).replace("IPv4:\n", "").strip()
-
-        if not qr_result:
-            bot.reply_to(message, "Failed to generate QR code.", reply_markup=create_main_markup())
-            return
-
-        qr_v4 = qrcode.make(qr_result)
-        bio_v4 = io.BytesIO()
-        qr_v4.save(bio_v4, 'PNG')
-        bio_v4.seek(0)
-        caption = f"{result}\n\n`{qr_result}`"
-        bot.send_photo(message.chat.id, photo=bio_v4, caption=caption, parse_mode="Markdown", reply_markup=create_main_markup())
-
+        bot.reply_to(message, f"Adding user {username}... Please wait.", reply_markup=types.ReplyKeyboardRemove())
+        
+        try:
+            # Initialize API client - no credentials needed, API handles them internally
+            api_client = VpnApiClient()
+            
+            # Create VpnUser object without password (API will generate it)
+            # Username is already lowercase from process_add_user_step1
+            user = VpnUser(username, traffic_limit, expiration_days)
+            
+            # Add user through API
+            response = api_client.add_user(user)
+            
+            # Generate subscription URL using SUB_URL from environment
+            sub_url = f"https://{SUB_URL.replace('https://', '').replace('http://', '').rstrip('/')}/sub/normal/{username}#Hysteria2"
+            
+            # Generate QR code for the URL
+            qr = qrcode.make(sub_url)
+            bio = io.BytesIO()
+            qr.save(bio, 'PNG')
+            bio.seek(0)
+            
+            # Create response message
+            result_message = f"User {username} added successfully!\n\n"
+            result_message += f"Traffic limit: {traffic_limit} GB\n"
+            result_message += f"Expiration days: {expiration_days}\n\n"
+            result_message += f"`{sub_url}`"
+            
+            # Send response with QR code
+            bot.send_photo(message.chat.id, photo=bio, caption=result_message, parse_mode="Markdown", 
+                          reply_markup=create_main_markup())
+            
+        except Exception as e:
+            bot.reply_to(message, f"Error adding user: {str(e)}", reply_markup=create_main_markup())
+            
     except ValueError:
         bot.reply_to(message, "Invalid expiration days. Please enter a number:", reply_markup=create_cancel_markup(back_step=process_add_user_step2))
         bot.register_next_step_handler(message, process_add_user_step3, username, traffic_limit)
