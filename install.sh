@@ -86,7 +86,7 @@ setup_repository() {
     echo -e "Setting up repository..."
     
     # Set installation directory
-    INSTALL_DIR="/etc/hysteria/dijiq2"
+    INSTALL_DIR="/etc/dijiq2"
     mkdir -p $INSTALL_DIR
 
     # Check if we're running from the cloned repository or via curl
@@ -106,7 +106,7 @@ setup_repository() {
 setup_python_environment() {
     echo -e "Setting up Python environment..."
     
-    INSTALL_DIR="/etc/hysteria/dijiq2"
+    INSTALL_DIR="/etc/dijiq2"
     cd $INSTALL_DIR
     
     # Create virtual environment
@@ -121,7 +121,7 @@ setup_python_environment() {
 setup_configuration() {
     echo -e "Setting up configuration..."
     
-    INSTALL_DIR="/etc/hysteria/dijiq2"
+    INSTALL_DIR="/etc/dijiq2"
     
     # Create .env file if it doesn't exist
     if [ ! -f "$INSTALL_DIR/.env" ]; then
@@ -136,26 +136,29 @@ setup_configuration() {
     chmod +x $INSTALL_DIR/src/bot/runbot.sh
 }
 
-setup_alias() {
-    echo -e "Setting up command alias..."
+setup_commands() {
+    echo -e "Setting up system commands..."
     
-    INSTALL_DIR="/etc/hysteria/dijiq2"
+    INSTALL_DIR="/etc/dijiq2"
     
-    # Create alias for easy access
-    if ! grep -q "alias dijiq2=" ~/.bashrc; then
-        echo "alias dijiq2='cd $INSTALL_DIR && source venv/bin/activate && python src/bot/tbot.py'" >> ~/.bashrc
-        echo "alias dijiq2-config='nano $INSTALL_DIR/.env'" >> ~/.bashrc
-        
-        # Also add to .bash_profile for login shells
-        if [ -f ~/.bash_profile ]; then
-            echo "alias dijiq2='cd $INSTALL_DIR && source venv/bin/activate && python src/bot/tbot.py'" >> ~/.bash_profile
-            echo "alias dijiq2-config='nano $INSTALL_DIR/.env'" >> ~/.bash_profile
-        fi
-        
-        echo -e "${GREEN}Aliases added to your shell configuration.${NC}"
-    else
-        echo -e "${GREEN}Aliases already exist.${NC}"
-    fi
+    # Create actual executable scripts instead of aliases
+    cat > /usr/local/bin/dijiq2 << EOF
+#!/bin/bash
+cd $INSTALL_DIR
+source venv/bin/activate
+python src/bot/tbot.py
+EOF
+
+    cat > /usr/local/bin/dijiq2-config << EOF
+#!/bin/bash
+nano $INSTALL_DIR/.env
+EOF
+
+    # Make them executable
+    chmod +x /usr/local/bin/dijiq2
+    chmod +x /usr/local/bin/dijiq2-config
+    
+    echo -e "${GREEN}Commands 'dijiq2' and 'dijiq2-config' are now available system-wide.${NC}"
 }
 
 display_completion() {
@@ -163,13 +166,12 @@ display_completion() {
     echo -e "${GREEN}Installation completed! $heavy_checkmark${NC}"
     echo ""
     echo -e "${YELLOW}To configure the bot:${NC}"
-    echo -e "  Edit the .env file: ${GREEN}nano /etc/hysteria/dijiq2/.env${NC}"
-    echo -e "  Or use the alias: ${GREEN}dijiq2-config${NC}"
+    echo -e "  Run the command: ${GREEN}dijiq2-config${NC}"
     echo ""
     echo -e "${YELLOW}To start the bot:${NC}"
-    echo -e "  Use the command: ${GREEN}dijiq2${NC}"
+    echo -e "  Run the command: ${GREEN}dijiq2${NC}"
     echo ""
-    echo -e "You may need to restart your shell or run ${GREEN}source ~/.bashrc${NC} for the aliases to take effect."
+    echo -e "${YELLOW}These commands are available immediately - no restart required.${NC}"
 }
 
 main() {
@@ -180,7 +182,7 @@ main() {
     setup_repository
     setup_python_environment
     setup_configuration
-    setup_alias
+    setup_commands  # Changed from setup_alias to setup_commands
     display_completion
 }
 
